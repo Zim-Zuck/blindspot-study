@@ -161,10 +161,6 @@
         <h3 class="cs-title">Your right to withdraw</h3>
         <p>Your participation is <strong>completely voluntary</strong>. You may stop at any point by simply closing this browser tab. If you stop before completing the simulation and uploading your file, <strong>none of your data will be sent to the researcher</strong>. There is no penalty for withdrawing and no one will be told.</p>
       </div>
-      <div class="consent-section">
-        <h3 class="cs-title">Questions or concerns</h3>
-        <p>If you have any questions about this study, you can contact the researcher (Kunashe Makahamadze) or the adult sponsor named on your paper consent form. If you are under 18, please make sure a parent or guardian has reviewed and signed the parental permission form before you continue.</p>
-      </div>
       <div class="consent-section consent-agree">
         <h3 class="cs-title">Your agreement</h3>
         <p>By ticking the box below and entering your name, you confirm that:</p>
@@ -172,7 +168,6 @@
           <li>You have read and understood the information above.</li>
           <li>You are participating voluntarily and may withdraw at any time.</li>
           <li>You agree to your anonymous responses being collected as described.</li>
-          <li>If you are under 18, your parent or guardian has given written permission.</li>
         </ul>
         <div class="consent-form">
           <label class="consent-check">
@@ -687,14 +682,21 @@ function showCompletion() {
 
 // ── DATA DOWNLOAD ─────────────────────────────────
 function downloadData() {
+  // Generate a 4-char random ID using an ambiguity-safe alphabet
+  // (no 0/o/1/l/i — so filenames are easy to read aloud / transcribe).
+  const idChars = 'abcdefghjkmnpqrstuvwxyz23456789';
+  let sessionId = '';
+  for (let i = 0; i < 4; i++) sessionId += idChars[Math.floor(Math.random() * idChars.length)];
+
   const consent = JSON.parse(sessionStorage.getItem('medai_' + group + '_consent') || 'null');
-  const payload={group,consent,startedAt:sessionStorage.getItem('medai_A_startedAt')||'—',completedAt:new Date().toISOString(),totalCases:PATIENTS.length,decisions:sessionLog};
+  const payload={group,sessionId,consent,startedAt:sessionStorage.getItem('medai_A_startedAt')||'—',completedAt:new Date().toISOString(),totalCases:PATIENTS.length,decisions:sessionLog};
   const headers=['caseNumber','patientId','caseType','aiPrio','aiConf','aiCorrect','correctPrio','decision','chosenPrio','participantCorrect','followedWrongAI','timestamp'];
   const rows=sessionLog.map(e=>headers.map(h=>JSON.stringify(e[h]??'')).join(','));
   const csv=[headers.join(','),...rows].join('\n');
-  const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
-  triggerDownload(new Blob([csv],{type:'text/csv'}),           `medai_${group}_${ts}.csv`);
-  setTimeout(()=>triggerDownload(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`medai_${group}_${ts}.json`),300);
+  const dateStr = new Date().toISOString().slice(0,10);
+  const fileTag = `${group}_${dateStr}_${sessionId}`;
+  triggerDownload(new Blob([csv],{type:'text/csv'}),           `medai_${fileTag}.csv`);
+  setTimeout(()=>triggerDownload(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`medai_${fileTag}.json`),300);
 }
 function triggerDownload(blob,filename) {
   const url=URL.createObjectURL(blob),a=document.createElement('a');
@@ -723,4 +725,4 @@ function triggerDownload(blob,filename) {
 })();
 </script>
 </body>
-</html> 
+</html>
