@@ -7,6 +7,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
 <link rel="stylesheet" href="Test.css">
+<style>
+  .comp-steps { list-style: decimal inside; padding: 0; margin: 0 0 24px 0; max-width: 520px; text-align: left; font-family: var(--font-mono); font-size: 12px; color: var(--text-2); line-height: 1.9; }
+  .comp-steps li { margin-bottom: 6px; }
+  .comp-steps strong { color: var(--text-1); font-weight: 600; }
+  .comp-link { color: var(--cyan); text-decoration: none; word-break: break-all; border-bottom: 1px dashed var(--cyan); padding-bottom: 1px; }
+  .comp-link:hover { opacity: 0.8; }
+</style>
 </head>
 <body>
 
@@ -100,10 +107,12 @@
 
   <div class="completion" id="compScreen">
     <div class="comp-tag">Simulation Complete</div>
-    <h2 class="comp-h2">All 25 Patients Reviewed</h2>
-    <p class="comp-sub">Here's a breakdown of your decisions</p>
-    <div class="results-grid" id="resultsGrid"></div>
-    <p class="comp-note" id="compNote"></p>
+    <h2 class="comp-h2">Thank you for participating</h2>
+    <p class="comp-sub">Your responses have been recorded. To submit them, please follow the two steps below.</p>
+    <ol class="comp-steps">
+      <li>Press the <strong>Download My Data</strong> button below to save your CSV file.</li>
+      <li>Upload that file to this Google Form: <a class="comp-link" href="https://forms.gle/r7FNZJMytdCrE3SGA" target="_blank" rel="noopener noreferrer">📂 https://forms.gle/r7FNZJMytdCrE3SGA</a></li>
+    </ol>
     <div class="comp-btns">
       <button class="btn-download" onclick="downloadData()">⬇ Download My Data</button>
     </div>
@@ -665,19 +674,6 @@ function nextPt() {
 function showCompletion() {
   document.getElementById('mainContent').style.display='none';
   document.getElementById('compScreen').classList.add('on');
-  const total=sessionLog.length;
-  const accepted=sessionLog.filter(e=>e.decision==='accept').length;
-  const overridden=sessionLog.filter(e=>e.decision==='override').length;
-  const trapsCaught=sessionLog.filter(e=>e.caseType==='trap'&&e.decision==='override').length;
-  const trapsFollowed=sessionLog.filter(e=>e.caseType==='trap'&&e.decision==='accept').length;
-  const correct=sessionLog.filter(e=>e.participantCorrect).length;
-  const accuracy=total>0?Math.round((correct/total)*100):0;
-  document.getElementById('resultsGrid').innerHTML=`
-    <div class="res-card total-card"><div class="res-card-label">Overall Accuracy</div><div class="res-card-val">${accuracy}%</div><div class="res-card-sub">${correct} of ${total} correct</div></div>
-    <div class="res-card acc-card"><div class="res-card-label">Accepted AI</div><div class="res-card-val">${accepted}</div><div class="res-card-sub">out of ${total} cases</div></div>
-    <div class="res-card ovr-card"><div class="res-card-label">Overrode AI</div><div class="res-card-val">${overridden}</div><div class="res-card-sub">out of ${total} cases</div></div>
-    <div class="res-card trap-card"><div class="res-card-label">Traps Caught</div><div class="res-card-val">${trapsCaught} / 5</div><div class="res-card-sub">${trapsFollowed} trap${trapsFollowed!==1?'s':''} followed</div></div>`;
-  document.getElementById('compNote').textContent='Your full session data has been saved locally as a backup. Use the button below to download it — or keep this window open until your instructor collects it.';
 }
 
 // ── DATA DOWNLOAD ─────────────────────────────────
@@ -689,14 +685,49 @@ function downloadData() {
   for (let i = 0; i < 4; i++) sessionId += idChars[Math.floor(Math.random() * idChars.length)];
 
   const consent = JSON.parse(sessionStorage.getItem('medai_' + group + '_consent') || 'null');
-  const payload={group,sessionId,consent,startedAt:sessionStorage.getItem('medai_B_startedAt')||'—',completedAt:new Date().toISOString(),totalCases:PATIENTS.length,decisions:sessionLog};
-  const headers=['caseNumber','patientId','caseType','aiPrio','aiConf','aiCorrect','correctPrio','decision','chosenPrio','participantCorrect','followedWrongAI','timestamp'];
-  const rows=sessionLog.map(e=>headers.map(h=>JSON.stringify(e[h]??'')).join(','));
-  const csv=[headers.join(','),...rows].join('\n');
+  const startedAt = sessionStorage.getItem('medai_B_startedAt') || '—';
+  const completedAt = new Date().toISOString();
+
+  // Summary metrics
+  const total = sessionLog.length;
+  const accepted = sessionLog.filter(e=>e.decision==='accept').length;
+  const overridden = sessionLog.filter(e=>e.decision==='override').length;
+  const trapsCaught = sessionLog.filter(e=>e.caseType==='trap'&&e.decision==='override').length;
+  const trapsFollowed = sessionLog.filter(e=>e.caseType==='trap'&&e.decision==='accept').length;
+  const correct = sessionLog.filter(e=>e.participantCorrect).length;
+  const accuracy = total>0?Math.round((correct/total)*100):0;
+
+  // CSV escaping helper
+  const esc = v => JSON.stringify(v ?? '');
+
+  // Summary block as key/value rows (one metric per row, two columns)
+  const summaryRows = [
+    ['# SESSION SUMMARY',''],
+    ['group', group],
+    ['sessionId', sessionId],
+    ['startedAt', startedAt],
+    ['completedAt', completedAt],
+    ['totalCases', total],
+    ['overallAccuracyPct', accuracy],
+    ['correctCount', correct],
+    ['acceptedAI', accepted],
+    ['overrodeAI', overridden],
+    ['trapsCaught', trapsCaught],
+    ['trapsFollowed', trapsFollowed],
+    ['consentName', consent ? consent.name : ''],
+    ['consentAgreedAt', consent ? consent.agreedAt : ''],
+    ['',''],
+    ['# PER-CASE DECISIONS','']
+  ].map(r => r.map(esc).join(',')).join('\n');
+
+  // Per-decision rows
+  const headers = ['caseNumber','patientId','caseType','aiPrio','aiConf','aiCorrect','correctPrio','decision','chosenPrio','participantCorrect','followedWrongAI','timestamp'];
+  const decisionRows = sessionLog.map(e=>headers.map(h=>esc(e[h])).join(','));
+  const csv = summaryRows + '\n' + headers.join(',') + '\n' + decisionRows.join('\n');
+
   const dateStr = new Date().toISOString().slice(0,10);
   const fileTag = `${group}_${dateStr}_${sessionId}`;
-  triggerDownload(new Blob([csv],{type:'text/csv'}),           `medai_${fileTag}.csv`);
-  setTimeout(()=>triggerDownload(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`medai_${fileTag}.json`),300);
+  triggerDownload(new Blob([csv],{type:'text/csv'}), `medai_${fileTag}.csv`);
 }
 function triggerDownload(blob,filename) {
   const url=URL.createObjectURL(blob),a=document.createElement('a');
