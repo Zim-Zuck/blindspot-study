@@ -1,0 +1,614 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Blind Spot — Group C</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@300;400;500;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="Test.css">
+</head>
+<body>
+
+<div class="bg">
+  <div class="bg-orb orb1"></div><div class="bg-orb orb2"></div><div class="bg-orb orb3"></div>
+  <div class="bg-grid"></div>
+</div>
+
+<div class="app">
+<div class="sim-window" id="simWindow">
+
+  <div class="titlebar">
+    <div class="win-dots"><div class="wd wd-r"></div><div class="wd wd-y"></div><div class="wd wd-g"></div></div>
+    <div class="win-title">Blind Spot: Navigating the Grey Zone of Autonomous Decision Making</div>
+    <div class="grp-badge" id="grpBadge">GROUP C</div>
+  </div>
+
+  <div class="prog-wrap">
+    <div class="prog-meta">
+      <div class="prog-label"><span>Patient</span><span class="pnum" id="progCounter">1 of 25</span></div>
+    </div>
+    <div class="prog-track"><div class="prog-fill" id="progFill" style="width:4%"></div></div>
+  </div>
+
+  <div id="mainContent">
+    <div class="content-grid">
+
+      <div class="col">
+        <div class="col-hdr"><div class="col-dot" style="background:var(--blue)"></div><div class="col-title">Patient Record</div></div>
+        <div class="fade-target" id="ptContent">
+          <div class="pt-name" id="ptName">—</div>
+          <div class="pt-meta" id="ptMeta">—</div>
+          <div class="vitals-grid" id="vitalsGrid"></div>
+          <div class="info-block chief-block"><div class="ib-lbl">Why they came in</div><div class="ib-text" id="chiefText">—</div></div>
+          <div class="info-block triage-block"><div class="ib-lbl">What we found</div><div class="ib-text" id="triageText">—</div></div>
+        </div>
+      </div>
+
+      <div class="col ai-col">
+        <div class="col-hdr"><div class="col-dot" style="background:var(--cyan)"></div><div class="col-title">AI Analysis</div></div>
+        <div class="fade-target" id="aiContent">
+          <div class="prio-section">
+            <div class="prio-micro">Recommended Priority</div>
+            <div id="prioBadge" class="prio-badge p1"><div class="pn" id="prioNum">1</div><div class="pt">PRIORITY</div></div>
+            <div class="prio-name" id="prioName">IMMEDIATE</div>
+          </div>
+          <div id="confSection" class="conf-section hide">
+            <div class="conf-hdr"><div class="conf-lbl">AI Confidence</div><div class="conf-pct" id="confPct">0%</div></div>
+            <div class="conf-track"><div class="conf-fill" id="confFill"></div></div>
+            <div class="conf-segments" id="confSegs"></div>
+            <div class="ai-thinking" id="thinkRow">
+              <div class="tdots"><div class="tdot"></div><div class="tdot"></div><div class="tdot"></div></div>
+              <span>Analyzing parameters…</span>
+            </div>
+          </div>
+          <div id="reasonSection" class="reason-box hide">
+            <div class="reason-hdr"><div class="reason-icon">⬡</div><div class="reason-title">AI Reasoning Engine</div></div>
+            <div class="reason-text" id="reasonText">—</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="col act-col">
+        <div class="act-inner">
+          <div class="col-hdr"><div class="col-dot" style="background:var(--green)"></div><div class="col-title">Decision</div></div>
+          <div class="fade-target" id="actContent">
+            <div class="act-btns">
+              <button class="btn-accept" id="btnAccept" onclick="decide('accept')" aria-pressed="false"><span class="btico">✓</span> Accept AI Choice</button>
+              <button class="btn-override" id="btnOverride" onclick="decide('override')" aria-pressed="false"><span class="btico">⊘</span> Override Priority</button>
+            </div>
+            <div class="prio-sel" id="prioSel" aria-hidden="true">
+              <div class="psel-lbl">Select Correct Priority</div>
+              <div class="psel-opts">
+                <button class="popt" data-p="1" onclick="pickPriority(1)">1</button>
+                <button class="popt" data-p="2" onclick="pickPriority(2)">2</button>
+                <button class="popt" data-p="3" onclick="pickPriority(3)">3</button>
+                <button class="popt" data-p="4" onclick="pickPriority(4)">4</button>
+                <button class="popt" data-p="5" onclick="pickPriority(5)">5</button>
+              </div>
+            </div>
+            <div class="dec-zone">
+              <div class="dec-box" id="decBox"><div class="dec-meta">Decision</div><div class="dec-val m" id="decVal">Awaiting input…</div></div>
+              <button class="btn-next" id="btnNext" onclick="nextPt()" disabled>Next Patient →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <div class="completion" id="compScreen">
+    <div class="comp-tag">Simulation Complete</div>
+    <h2 class="comp-h2">All 25 Patients Reviewed</h2>
+    <p class="comp-sub">Here's a breakdown of your decisions</p>
+    <div class="results-grid" id="resultsGrid"></div>
+    <p class="comp-note" id="compNote"></p>
+    <div class="comp-btns">
+      <button class="btn-download" onclick="downloadData()">⬇ Download My Data</button>
+    </div>
+  </div>
+
+  <div class="footer">
+    <div class="footer-lbl">Made by Kunashe Makahamadze · Ethics Approved · Data Anonymised</div>
+    <div class="footer-right">
+      <button class="btn-help" onclick="openRules()">? How to Play</button>
+      <div class="status"><div class="sdot"></div>System Online</div>
+    </div>
+  </div>
+
+  <div class="overlay" id="overlay"><div class="spin"></div><div class="spin-lbl">Loading Next Case…</div></div>
+
+</div>
+</div>
+
+
+</div>
+
+<!-- RULES MODAL -->
+<div class="rules-backdrop hide" id="rulesBackdrop" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
+  <div class="rules-modal">
+    <div class="rm-header">
+      <div class="rm-titles">
+        <div class="rm-eyebrow">How This Works</div>
+        <h2 class="rm-h1" id="rulesTitle">Your Instructions</h2>
+        <p class="rm-sub">You're stepping into the role of an emergency triage nurse. Read each patient's information and decide how urgently they need care.</p>
+      </div>
+      <button class="rm-close" onclick="closeRules()">✕</button>
+    </div>
+    <div class="rm-body">
+      <div class="rm-section rm-section-blue">
+        <div class="rm-sec-hdr"><div class="rm-sec-icon">🏥</div><div class="rm-sec-title">What is triage?</div></div>
+        <div class="rm-sec-body">
+          <p>When patients arrive at an emergency department, there often isn't enough time or staff to treat everyone at once. Triage is the process of figuring out <strong>who needs help the most urgently</strong> — so the sickest patients are seen first.</p>
+          <p>You'll review 25 patients one at a time. For each one, an AI system will suggest a priority level. Your job is to decide whether you agree with the AI or whether something seems off.</p>
+        </div>
+      </div>
+      <div class="rm-section rm-section-cyan">
+        <div class="rm-sec-hdr"><div class="rm-sec-icon">🔢</div><div class="rm-sec-title">The 5 priority levels</div></div>
+        <div class="rm-sec-body"><p>Priority is rated 1 (most urgent) to 5 (least urgent):</p></div>
+        <div class="prio-legend">
+          <div class="pl-row"><div class="pl-badge pl1">1</div><div class="pl-info"><div class="pl-name">Immediate</div><div class="pl-desc">Life-threatening. Needs attention right now — seconds matter.</div></div></div>
+          <div class="pl-row"><div class="pl-badge pl2">2</div><div class="pl-info"><div class="pl-name">Urgent</div><div class="pl-desc">Serious condition. Could get much worse quickly without treatment.</div></div></div>
+          <div class="pl-row"><div class="pl-badge pl3">3</div><div class="pl-info"><div class="pl-name">Semi-Urgent</div><div class="pl-desc">Needs care soon, but stable for now. Can wait a short while.</div></div></div>
+          <div class="pl-row"><div class="pl-badge pl4">4</div><div class="pl-info"><div class="pl-name">Less Urgent</div><div class="pl-desc">Not in danger. Can wait comfortably for longer.</div></div></div>
+          <div class="pl-row"><div class="pl-badge pl5">5</div><div class="pl-info"><div class="pl-name">Non-Urgent</div><div class="pl-desc">Minor issue or routine visit. No urgency at all.</div></div></div>
+        </div>
+      </div>
+      <div class="rm-section rm-section-amber">
+        <div class="rm-sec-hdr"><div class="rm-sec-icon">📊</div><div class="rm-sec-title">Reading the patient data</div></div>
+        <div class="rm-sec-body"><p>Each patient shows six vital signs — basic body measurements. Each has a coloured dot:</p></div>
+        <div class="dot-legend">
+          <div class="dl-row"><div class="dl-dot" style="background:var(--green);box-shadow:0 0 5px rgba(16,185,129,0.5)"></div><div class="dl-text"><strong>Green</strong> — normal and healthy</div></div>
+          <div class="dl-row"><div class="dl-dot" style="background:var(--amber);box-shadow:0 0 5px rgba(245,158,11,0.5)"></div><div class="dl-text"><strong>Amber</strong> — slightly abnormal, worth noting</div></div>
+          <div class="dl-row"><div class="dl-dot" style="background:var(--red);box-shadow:0 0 5px rgba(239,68,68,0.5)"></div><div class="dl-text"><strong>Red (flashing)</strong> — dangerously abnormal</div></div>
+        </div>
+        <div class="rm-sec-body" style="margin-top:10px;"><p><strong>"Why they came in"</strong> is the patient's own words. <strong>"What we found"</strong> is what the medical team observed on arrival.</p></div>
+      </div>
+      <div class="rm-section rm-section-green">
+        <div class="rm-sec-hdr"><div class="rm-sec-icon">✅</div><div class="rm-sec-title">What you need to do</div></div>
+        <div class="rm-sec-body">
+          <p><strong>Accept AI Choice</strong> — you agree with the AI's suggested priority.</p>
+          <p><strong>Override Priority</strong> — you think the AI has it wrong. Select the priority you believe is correct (1–5). There is no penalty for overriding — use your honest judgement every time.</p>
+          <p>Once you've decided, click <strong>Next Patient</strong>. Work through all 25 patients, then your results will appear.</p>
+        </div>
+      </div>
+    </div>
+    <div class="rm-footer"><button class="btn-start" onclick="closeRules()">I'm ready — let's start →</button></div>
+  </div>
+</div>
+
+<script>
+// ── STATE ─────────────────────────────────────────
+const group = 'C';
+let ptIdx = 0, decision = null, overridePrio = null, confTimer = null;
+let sessionLog = [];
+
+// ── PATIENT DATA ──────────────────────────────────
+// caseType: 'easy' | 'cautious' | 'trap' | 'irrelevant'
+// aiCorrect: whether aiPrio === correctPrio
+const PATIENTS = [
+  // 8 EASY: high conf (>80%), AI correct
+  { id:'P01',name:'Patient 01',age:72,sex:'Male',bp:'88 / 54',hr:118,rr:28,temp:39.6,pain:6,spo2:91,
+    chief:'Confused, feverish, and barely urinating. Family says he has been declining for 2 days.',
+    triage:'Severe blood infection (septic shock) suspected. Fluids and antibiotics started urgently.',
+    aiPrio:1,correctPrio:1,conf:98,caseType:'easy',aiCorrect:true,
+    reasoning:'Hypotension, tachycardia, hypoxia, fever, and altered mental status all point to septic shock. Mortality risk is extremely high without immediate treatment. Every minute of delay significantly worsens the outcome. Priority 1 is the only appropriate classification.',
+    bpf:'danger',hrf:'danger',spo2f:'danger',tf:'danger' },
+  { id:'P02',name:'Patient 02',age:67,sex:'Male',bp:'158 / 94',hr:102,rr:22,temp:38.4,pain:7,spo2:94,
+    chief:'Chest tightness spreading to his left arm for the past 2 hours. Sweating heavily.',
+    triage:'Heart attack suspected. Aspirin given immediately. Heart trace (ECG) ordered.',
+    aiPrio:1,correctPrio:1,conf:92,caseType:'easy',aiCorrect:true,
+    reasoning:'Chest pain radiating to the left arm with diaphoresis in a 67-year-old male is a classic acute coronary syndrome presentation. Elevated BP, tachycardia, and reduced oxygen saturation compound the urgency. This patient needs a cardiac team immediately.',
+    bpf:'danger',hrf:'warning',spo2f:'warning',tf:'warning' },
+  { id:'P03',name:'Patient 03',age:55,sex:'Male',bp:'190 / 112',hr:96,rr:20,temp:37.8,pain:8,spo2:96,
+    chief:'The worst headache of his life, starting suddenly 45 minutes ago.',
+    triage:'Possible bleed in the brain. Slight neck stiffness. Emergency brain scan ordered.',
+    aiPrio:1,correctPrio:1,conf:96,caseType:'easy',aiCorrect:true,
+    reasoning:'A sudden "thunderclap" headache described as the worst ever, combined with hypertension and neck stiffness, is the textbook presentation of subarachnoid haemorrhage. Immediate CT is required. Any delay risks death or permanent disability.',
+    bpf:'danger',hrf:'ok',spo2f:'ok',tf:'warning' },
+  { id:'P04',name:'Patient 04',age:8,sex:'Male',bp:'100 / 62',hr:110,rr:26,temp:39.2,pain:5,spo2:95,
+    chief:'Wheezing and struggling to breathe. Known asthma — inhaler did not help this time.',
+    triage:'Moderate–severe asthma attack. Nebuliser treatment started. Oxygen given.',
+    aiPrio:2,correctPrio:2,conf:89,caseType:'easy',aiCorrect:true,
+    reasoning:'A child with known asthma whose home inhaler has failed, with SpO₂ 95% and elevated respiratory rate, represents a moderate-to-severe exacerbation. Children can deteriorate very quickly. Priority 2 with close monitoring is appropriate.',
+    bpf:'ok',hrf:'warning',spo2f:'warning',tf:'warning' },
+  { id:'P05',name:'Patient 05',age:41,sex:'Female',bp:'126 / 80',hr:78,rr:14,temp:36.9,pain:1,spo2:99,
+    chief:'Needs a repeat prescription for her blood pressure medication. Feels completely well.',
+    triage:'Routine visit. All readings normal. No signs of any urgent problem.',
+    aiPrio:5,correctPrio:5,conf:97,caseType:'easy',aiCorrect:true,
+    reasoning:'No acute pathology. All vital signs are within normal range. This is a routine prescription renewal with no indication of any urgent or emergent condition. Priority 5 is correct.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P06',name:'Patient 06',age:19,sex:'Female',bp:'122 / 78',hr:84,rr:15,temp:37.3,pain:2,spo2:100,
+    chief:'Mild wrist pain after bumping into another player during a match.',
+    triage:'Likely soft tissue bruising only. No deformity. Moving wrist normally.',
+    aiPrio:5,correctPrio:5,conf:91,caseType:'easy',aiCorrect:true,
+    reasoning:'Normal vital signs, full range of motion, minimal pain, and no structural injury indicators. Most likely a soft tissue contusion. No urgency. Priority 5 is appropriate.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P07',name:'Patient 07',age:34,sex:'Female',bp:'118 / 76',hr:88,rr:16,temp:37.1,pain:4,spo2:99,
+    chief:'Right ankle pain after tripping on a run. She cannot put weight on it.',
+    triage:'Possible fracture or bad sprain. Feeling in the foot is normal. X-ray requested.',
+    aiPrio:3,correctPrio:3,conf:87,caseType:'easy',aiCorrect:true,
+    reasoning:'Stable haemodynamics with an isolated musculoskeletal injury. Inability to bear weight suggests possible fracture, but no neurovascular compromise. Priority 3 is appropriate — imaging should be obtained without major delay.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P08',name:'Patient 08',age:28,sex:'Female',bp:'110 / 70',hr:76,rr:14,temp:38.9,pain:5,spo2:98,
+    chief:'Severe sore throat and difficulty swallowing for 3 days. Her voice sounds muffled.',
+    triage:'Abscess near the tonsil suspected. Airway being watched closely. Specialist called.',
+    aiPrio:2,correctPrio:2,conf:83,caseType:'easy',aiCorrect:true,
+    reasoning:'Muffled voice and difficulty swallowing with fever raises serious concern for a peritonsillar abscess, which can compromise the airway rapidly. Although vitals are currently stable, Priority 2 and immediate ENT review are warranted.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'warning' },
+
+  // 7 CAUTIOUS: low conf (<50%), AI still correct
+  { id:'P09',name:'Patient 09',age:61,sex:'Female',bp:'144 / 88',hr:70,rr:17,temp:37.0,pain:3,spo2:97,
+    chief:'Mild chest discomfort and unusual tiredness for one week, getting worse with exercise.',
+    triage:'Likely stable angina. No emergency signs on heart trace. Blood tests ordered.',
+    aiPrio:3,correctPrio:3,conf:44,caseType:'cautious',aiCorrect:true,
+    reasoning:'Exertional chest discomfort in a hypertensive 61-year-old has a broad differential. Troponin results are pending. The AI is uncertain between Priority 2 and 3, but current vital stability and no acute ECG changes supports Priority 3.',
+    bpf:'warning',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P10',name:'Patient 10',age:46,sex:'Male',bp:'132 / 84',hr:92,rr:18,temp:37.5,pain:6,spo2:97,
+    chief:'Stomach pain spreading to his back since a big meal 3 hours ago. Feeling sick.',
+    triage:'Inflamed pancreas suspected. Fluids started. Blood tests and scan ordered.',
+    aiPrio:2,correctPrio:2,conf:41,caseType:'cautious',aiCorrect:true,
+    reasoning:'The AI is uncertain here. Epigastric pain radiating to the back post-meal is consistent with pancreatitis, but symptom overlap reduces confidence. Despite this uncertainty, the potential for rapid deterioration means Priority 2 remains the cautious and correct classification.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P11',name:'Patient 11',age:78,sex:'Female',bp:'102 / 66',hr:96,rr:20,temp:37.6,pain:4,spo2:95,
+    chief:'Feeling very weak and dizzy since this morning. She nearly fell getting out of bed.',
+    triage:'Possible dehydration or early infection. IV fluids started. Blood and urine tests ordered.',
+    aiPrio:2,correctPrio:2,conf:38,caseType:'cautious',aiCorrect:true,
+    reasoning:'The AI is uncertain due to the non-specific nature of dizziness and weakness. However, borderline hypotension, mild tachycardia, and reduced oxygen saturation in a 78-year-old with a near-fall warrants Priority 2 — the consequences of under-triaging this patient are severe.',
+    bpf:'warning',hrf:'ok',spo2f:'warning',tf:'ok' },
+  { id:'P12',name:'Patient 12',age:23,sex:'Male',bp:'128 / 82',hr:90,rr:16,temp:38.1,pain:5,spo2:98,
+    chief:'Sharp pain on one side of his chest when breathing in. Started after a bout of coughing.',
+    triage:'Possible small collapsed lung. Breath sounds equal. Chest X-ray ordered.',
+    aiPrio:3,correctPrio:3,conf:47,caseType:'cautious',aiCorrect:true,
+    reasoning:'The AI is uncertain whether this is pleuritic chest pain or a pneumothorax. Equal breath sounds and normal SpO₂ make a large pneumothorax unlikely, but a small one cannot be excluded without imaging. Priority 3 is appropriate — the patient is stable but needs timely assessment.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P13',name:'Patient 13',age:52,sex:'Female',bp:'136 / 86',hr:94,rr:19,temp:38.3,pain:6,spo2:96,
+    chief:'Right-sided abdominal pain that started around her belly button and moved down.',
+    triage:'Appendicitis suspected. Abdomen tender on the right side. Surgical review requested.',
+    aiPrio:2,correctPrio:2,conf:46,caseType:'cautious',aiCorrect:true,
+    reasoning:'Migrating right iliac fossa pain is a classic appendicitis presentation but the clinical picture is not fully clear. Despite low confidence, suspected appendicitis warrants Priority 2 — surgical review and imaging should not be delayed.',
+    bpf:'warning',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P14',name:'Patient 14',age:35,sex:'Male',bp:'120 / 76',hr:82,rr:15,temp:37.2,pain:3,spo2:99,
+    chief:'Mild lower back pain after helping a friend move furniture yesterday.',
+    triage:'Muscular strain likely. No nerve symptoms. Normal power and sensation in both legs.',
+    aiPrio:4,correctPrio:4,conf:42,caseType:'cautious',aiCorrect:true,
+    reasoning:'The AI is cautious because back pain can occasionally mask serious conditions. However, the clear mechanism, no neurological deficits, and normal power and sensation reduce concern significantly. Priority 4 is appropriate.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P15',name:'Patient 15',age:66,sex:'Male',bp:'148 / 92',hr:88,rr:18,temp:37.4,pain:4,spo2:96,
+    chief:'Blurry vision and a mild headache on and off for two days. No other symptoms.',
+    triage:'Possible hypertensive episode. Eyes checked — no bleeding found. Bloods ordered.',
+    aiPrio:3,correctPrio:3,conf:39,caseType:'cautious',aiCorrect:true,
+    reasoning:'Visual disturbance with elevated BP in a 66-year-old has a broad differential. The absence of fundal haemorrhage and neurological deficits is reassuring, but investigation cannot wait. Priority 3 is correct despite low confidence.',
+    bpf:'warning',hrf:'ok',spo2f:'ok',tf:'ok' },
+
+  // 5 TRAPS: high conf (>80%), AI WRONG
+  { id:'P16',name:'Patient 16',age:44,sex:'Female',bp:'124 / 80',hr:86,rr:17,temp:37.2,pain:5,spo2:98,
+    chief:'Sudden sharp pain between her shoulder blades that started an hour ago while resting.',
+    triage:'Some tenderness found. No obvious cause yet. Bloods and ECG ordered as precaution.',
+    aiPrio:4,correctPrio:1,conf:85,caseType:'trap',aiCorrect:false,
+    reasoning:'The AI has classified this as Priority 4, citing stable vitals and a mild presentation. However, sudden-onset tearing back pain between the shoulder blades at rest — particularly in a female where aortic dissection can present atypically — is a red flag demanding urgent imaging. The AI is wrong here.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P17',name:'Patient 17',age:29,sex:'Male',bp:'118 / 74',hr:80,rr:14,temp:37.0,pain:3,spo2:100,
+    chief:'Sudden blurred vision in one eye this morning. No pain. Cleared up after 20 minutes.',
+    triage:'Vision returned to normal. Referred to eye clinic for a routine appointment.',
+    aiPrio:5,correctPrio:2,conf:88,caseType:'trap',aiCorrect:false,
+    reasoning:'The AI assigned Priority 5 because the vision has resolved and the patient feels well. This is incorrect. Transient monocular vision loss is a TIA equivalent and a warning sign for imminent stroke. Young age does not exclude this. This patient needs urgent same-day neurovascular assessment.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P18',name:'Patient 18',age:38,sex:'Female',bp:'116 / 72',hr:78,rr:14,temp:37.1,pain:2,spo2:99,
+    chief:'Mild swelling in her left calf for a few days. Slightly warm to touch. No injury.',
+    triage:'Possible blood clot. Calf is mildly tender. Ultrasound scan requested.',
+    aiPrio:4,correctPrio:2,conf:82,caseType:'trap',aiCorrect:false,
+    reasoning:'The AI rated this Priority 4 based on stable vitals and mild symptoms. This is a significant error. Unilateral calf swelling with warmth and tenderness in a young woman is a classic DVT presentation. A DVT can cause a pulmonary embolism. This needs urgent imaging today — not a routine referral.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P19',name:'Patient 19',age:71,sex:'Male',bp:'138 / 86',hr:74,rr:16,temp:36.8,pain:2,spo2:97,
+    chief:'Slightly confused since this morning. His wife says he is "not quite himself." No other complaints.',
+    triage:'Appears calm and cooperative. Wife concerned. Blood sugar normal. Bloods pending.',
+    aiPrio:4,correctPrio:2,conf:84,caseType:'trap',aiCorrect:false,
+    reasoning:'The AI assigned Priority 4 because the patient appears outwardly calm with no dramatic symptoms. This is dangerous reasoning. New-onset confusion in a 71-year-old — especially noted by a family member — is a medical emergency. Causes include stroke, subdural haematoma, and metabolic crisis. Immediate assessment is required.',
+    bpf:'warning',hrf:'ok',spo2f:'ok',tf:'ok' },
+  { id:'P20',name:'Patient 20',age:32,sex:'Male',bp:'122 / 78',hr:82,rr:15,temp:37.3,pain:4,spo2:99,
+    chief:'Stomach pain and has been vomiting. Took some painkillers earlier.',
+    triage:'Abdomen soft. Tolerating small sips of water. Anti-nausea medication given.',
+    aiPrio:4,correctPrio:2,conf:86,caseType:'trap',aiCorrect:false,
+    reasoning:'The AI assigned Priority 4 based on superficially stable observations. However, the fact that the patient took painkillers before arriving is critically important — it may be masking peritoneal signs. The soft abdomen in this context is unreliable. Until the type and dose of analgesia is known and a full surgical assessment is completed, this patient should be Priority 2.',
+    bpf:'ok',hrf:'ok',spo2f:'ok',tf:'ok' },
+
+  // 5 IRRELEVANT: low conf (<50%), AI wrong — most participants will catch these
+  { id:'P21',name:'Patient 21',age:53,sex:'Male',bp:'158 / 98',hr:98,rr:21,temp:38.8,pain:7,spo2:93,
+    chief:'Breathless and wheezing. Known lung condition. Worse than usual since yesterday.',
+    triage:'Significant breathing difficulty. Oxygen started. Breathing treatment given.',
+    aiPrio:4,correctPrio:1,conf:31,caseType:'irrelevant',aiCorrect:false,
+    reasoning:'The AI is very uncertain and has suggested Priority 4. This is clearly wrong. SpO₂ of 93% with respiratory distress, tachycardia, elevated BP, and fever in someone with a known lung condition represents an acute exacerbation needing immediate intervention. Priority 1 is correct.',
+    bpf:'danger',hrf:'warning',spo2f:'danger',tf:'warning' },
+  { id:'P22',name:'Patient 22',age:16,sex:'Female',bp:'90 / 58',hr:122,rr:24,temp:36.5,pain:8,spo2:96,
+    chief:'Severe stomach cramps and has been vomiting repeatedly for hours. Cannot keep anything down.',
+    triage:'Pale, sweaty, and very tachycardic. Significant dehydration suspected. IV access gained.',
+    aiPrio:5,correctPrio:1,conf:28,caseType:'irrelevant',aiCorrect:false,
+    reasoning:'The AI has very low confidence and incorrectly suggested Priority 5. Hypotension, severe tachycardia, and clinical dehydration in a teenager with prolonged vomiting indicates haemodynamic compromise. This patient needs immediate resuscitation. Priority 1 is correct.',
+    bpf:'danger',hrf:'danger',spo2f:'ok',tf:'ok' },
+  { id:'P23',name:'Patient 23',age:60,sex:'Female',bp:'170 / 104',hr:100,rr:22,temp:37.9,pain:7,spo2:94,
+    chief:'Woke up unable to move her right arm properly. Speech seems slightly slurred to her husband.',
+    triage:'Possible stroke. Right arm weakness confirmed. Slurred speech noted. Stroke team called.',
+    aiPrio:3,correctPrio:1,conf:35,caseType:'irrelevant',aiCorrect:false,
+    reasoning:'The AI is uncertain and incorrectly assigned Priority 3. Acute onset unilateral arm weakness with dysarthria in a hypertensive patient is a stroke until proven otherwise. For every minute without treatment, approximately 1.9 million neurons die. Priority 1 and immediate stroke protocol activation are required.',
+    bpf:'danger',hrf:'warning',spo2f:'warning',tf:'warning' },
+  { id:'P24',name:'Patient 24',age:25,sex:'Male',bp:'108 / 68',hr:108,rr:20,temp:38.2,pain:6,spo2:97,
+    chief:'Severe allergic reaction after eating at a restaurant. Face is swollen and throat feels tight.',
+    triage:'Throat tightness noted. Mild lip swelling. Adrenaline (epinephrine) prepared.',
+    aiPrio:3,correctPrio:1,conf:42,caseType:'irrelevant',aiCorrect:false,
+    reasoning:'The AI is uncertain and has incorrectly suggested Priority 3. Throat tightness in the context of an allergic reaction is anaphylaxis until proven otherwise — the airway can close within minutes. This patient needs adrenaline and immediate monitoring. Priority 1 is the only appropriate classification.',
+    bpf:'ok',hrf:'warning',spo2f:'ok',tf:'ok' },
+  { id:'P25',name:'Patient 25',age:48,sex:'Male',bp:'96 / 60',hr:114,rr:26,temp:39.4,pain:5,spo2:92,
+    chief:'Coughing with yellow-green phlegm and struggling to breathe properly for 3 days.',
+    triage:'Significant chest infection. Very short of breath at rest. Oxygen and IV antibiotics started.',
+    aiPrio:4,correctPrio:1,conf:29,caseType:'irrelevant',aiCorrect:false,
+    reasoning:'The AI has very low confidence and incorrectly assigned Priority 4. This patient has hypotension, tachycardia, hypoxia, fever, and respiratory distress — severe community-acquired pneumonia meeting sepsis criteria. The 3-day history does not reduce the urgency of the current presentation. Priority 1 is required.',
+    bpf:'danger',hrf:'danger',spo2f:'danger',tf:'danger' }
+];
+
+const PRIO_NAMES  = ['','IMMEDIATE','URGENT','SEMI-URGENT','LESS URGENT','NON-URGENT'];
+const PRIO_CLASS  = ['','p1','p2','p3','p4','p5'];
+const PRIO_COLORS = ['','var(--red)','var(--orange)','var(--amber)','var(--blue)','var(--green)'];
+
+// ── SESSION STORAGE (survives page refresh) ───────
+function saveSession() {
+  sessionStorage.setItem('medai_C_ptIdx', String(ptIdx));
+  sessionStorage.setItem('medai_C_log', JSON.stringify(sessionLog));
+}
+function loadSession() {
+  const stored = sessionStorage.getItem('medai_C_ptIdx');
+  if (stored === null) return false;
+  ptIdx = parseInt(stored) || 0;
+  sessionLog = JSON.parse(sessionStorage.getItem('medai_C_log') || '[]');
+  return true;
+}
+function clearSession() {
+  ['medai_C_group','medai_C_ptIdx','medai_C_log','medai_C_startedAt'].forEach(k => sessionStorage.removeItem(k));
+}
+
+// ── LOCALSTORAGE BACKUP (written after every decision) ──
+function backupToLocal() {
+  try {
+    localStorage.setItem('medai_C_backup', JSON.stringify({
+      group,
+      startedAt: sessionStorage.getItem('medai_C_startedAt') || '—',
+      savedAt: new Date().toISOString(),
+      decisions: sessionLog
+    }));
+  } catch(e) { /* storage full — silently skip */ }
+}
+
+function updateGroupBadge() {
+  const badge = document.getElementById('grpBadge');
+  badge.textContent = `GROUP ${group}`;
+  const c = {A:'rgba(59,130,246,',B:'rgba(34,211,238,',C:'rgba(16,185,129,'}[group];
+  const t = {A:'#7eb8ff',B:'#67e8f9',C:'#6ee7b7'}[group];
+  badge.style.borderColor = c+'0.4)';
+  badge.style.background  = c+'0.12)';
+  badge.style.color = t;
+}
+
+// ── RULES MODAL ───────────────────────────────────
+function openRules() {
+  const bd = document.getElementById('rulesBackdrop');
+  bd.classList.remove('hide','closing');
+  bd.style.display = 'flex';
+  bd.style.animation = 'rb-in 0.28s ease both';
+  bd.querySelector('.rules-modal').scrollTop = 0;
+  document.body.style.overflow = 'hidden';
+}
+function closeRules() {
+  const bd = document.getElementById('rulesBackdrop');
+  bd.classList.add('closing');
+  document.body.style.overflow = '';
+  setTimeout(() => { bd.style.display = 'none'; bd.classList.remove('closing'); }, 220);
+}
+document.getElementById('rulesBackdrop').addEventListener('click', function(e){ if(e.target===this) closeRules(); });
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeRules(); });
+
+// ── LOAD PATIENT ──────────────────────────────────
+function loadPt(i) {
+  const p = PATIENTS[i];
+  if (!p) return;
+
+  document.getElementById('progCounter').textContent = `${i+1} of ${PATIENTS.length}`;
+  document.getElementById('progFill').style.width = `${((i+1)/PATIENTS.length)*100}%`;
+  document.getElementById('ptName').textContent = p.name;
+  document.getElementById('ptMeta').textContent = `${p.age} years old · ${p.sex}`;
+
+  const fs = {ok:'ok',warning:'warn',danger:'bad',''  :''};
+  const vItems = [
+    {lbl:'Blood Pressure',val:p.bp,  unit:'mmHg',  flag:p.bpf  },
+    {lbl:'Heart Rate',    val:p.hr,  unit:'bpm',   flag:p.hrf  },
+    {lbl:'Oxygen Level',  val:p.spo2,unit:'%',     flag:p.spo2f},
+    {lbl:'Temperature',   val:p.temp,unit:'°C',    flag:p.tf   },
+    {lbl:'Breathing Rate',val:p.rr,  unit:'br/min',flag:''     },
+    {lbl:'Pain Score',    val:p.pain,unit:'/10',   flag:''     }
+  ];
+  document.getElementById('vitalsGrid').innerHTML = vItems.map(v => {
+    const sc = fs[v.flag] ? `vstatus vstatus-${fs[v.flag]}` : 'vstatus vstatus-none';
+    return `<div class="vital${v.flag?` flag-${v.flag}`:''}">
+      <div class="vital-top"><div class="vl">${v.lbl}</div><div class="${sc}"></div></div>
+      <div class="vv">${v.val}<span class="vu">${v.unit}</span></div></div>`;
+  }).join('');
+
+  document.getElementById('chiefText').textContent  = p.chief;
+  document.getElementById('triageText').textContent = p.triage;
+
+  const badge = document.getElementById('prioBadge');
+  badge.className = `prio-badge ${PRIO_CLASS[p.aiPrio]}`;
+  document.getElementById('prioNum').textContent = p.aiPrio;
+  const pName = document.getElementById('prioName');
+  pName.textContent = PRIO_NAMES[p.aiPrio];
+  pName.style.color = PRIO_COLORS[p.aiPrio];
+
+  const confEl = document.getElementById('confSection');
+  if (group==='B'||group==='C') { confEl.classList.remove('hide'); animateConf(p.conf); }
+  else confEl.classList.add('hide');
+
+  const reasonEl = document.getElementById('reasonSection');
+  if (group==='C') { reasonEl.classList.remove('hide'); document.getElementById('reasonText').textContent = p.reasoning; }
+  else reasonEl.classList.add('hide');
+
+  resetDecision();
+}
+
+// ── CONFIDENCE ANIMATION ──────────────────────────
+function animateConf(target) {
+  if (confTimer) clearTimeout(confTimer);
+  const segsEl = document.getElementById('confSegs');
+  segsEl.innerHTML = Array.from({length:10},(_,k)=>`<div class="cseg" id="cs${k}"></div>`).join('');
+  const fill = document.getElementById('confFill');
+  fill.style.width='0%'; fill.classList.remove('shim');
+  document.getElementById('confPct').textContent='0%';
+  document.getElementById('thinkRow').style.display='flex';
+  const grad = target>=85?'linear-gradient(90deg,var(--cyan),var(--green))':target>=65?'linear-gradient(90deg,var(--blue),var(--cyan))':'linear-gradient(90deg,var(--amber),var(--orange))';
+  confTimer = setTimeout(() => {
+    fill.style.background=grad; fill.style.width=`${target}%`; fill.classList.add('shim');
+    let cur=0; const inc=target/52;
+    const iv=setInterval(()=>{
+      cur=Math.min(cur+inc,target);
+      const r=Math.round(cur);
+      document.getElementById('confPct').textContent=`${r}%`;
+      const as=Math.round((cur/100)*10);
+      for(let k=0;k<10;k++){const s=document.getElementById(`cs${k}`);if(s)s.classList.toggle('on',k<as);}
+      if(cur>=target){clearInterval(iv);document.getElementById('thinkRow').style.display='none';}
+    },22);
+  },380);
+}
+
+// ── DECISION ──────────────────────────────────────
+function decide(type) {
+  decision = type;
+  const btnA=document.getElementById('btnAccept'),btnO=document.getElementById('btnOverride');
+  const prioSel=document.getElementById('prioSel'),decBox=document.getElementById('decBox'),decVal=document.getElementById('decVal');
+  if (type==='accept') {
+    btnA.classList.add('sel');    btnA.setAttribute('aria-pressed','true');
+    btnO.classList.remove('sel'); btnO.setAttribute('aria-pressed','false');
+    prioSel.classList.remove('open'); prioSel.setAttribute('aria-hidden','true');
+    const p=PATIENTS[ptIdx];
+    decBox.className='dec-box acc'; decVal.className='dec-val g';
+    decVal.textContent=`Accepted — Priority ${p.aiPrio}`;
+    document.getElementById('btnNext').disabled=false;
+    recordDecision('accept',p.aiPrio);
+  } else {
+    btnO.classList.add('sel');    btnO.setAttribute('aria-pressed','true');
+    btnA.classList.remove('sel'); btnA.setAttribute('aria-pressed','false');
+    prioSel.classList.add('open'); prioSel.setAttribute('aria-hidden','false');
+    decBox.className='dec-box ovr'; decVal.className='dec-val a';
+    decVal.textContent='Override — select a priority below…';
+  }
+}
+function pickPriority(p) {
+  overridePrio=p;
+  document.querySelectorAll('.popt').forEach(b=>b.className='popt');
+  const btn=document.querySelector(`.popt[data-p="${p}"]`);
+  if(btn) btn.className=`popt sp${p}`;
+  document.getElementById('decVal').textContent=`Override — Priority ${p} selected`;
+  document.getElementById('btnNext').disabled=false;
+  recordDecision('override',p);
+}
+
+// ── RECORD DECISION ───────────────────────────────
+function recordDecision(decisionType, chosenPrio) {
+  const p = PATIENTS[ptIdx];
+  const entry = {
+    caseNumber:       ptIdx+1,
+    patientId:        p.id,
+    caseType:         p.caseType,
+    aiPrio:           p.aiPrio,
+    aiConf:           p.conf,
+    aiCorrect:        p.aiCorrect,
+    correctPrio:      p.correctPrio,
+    decision:         decisionType,
+    chosenPrio:       chosenPrio,
+    participantCorrect: chosenPrio===p.correctPrio,
+    followedWrongAI:  !p.aiCorrect && decisionType==='accept',
+    timestamp:        new Date().toISOString()
+  };
+  const idx = sessionLog.findIndex(e=>e.patientId===p.id);
+  if(idx>=0) sessionLog[idx]=entry; else sessionLog.push(entry);
+  saveSession();
+  backupToLocal();
+}
+
+// ── RESET DECISION UI ─────────────────────────────
+function resetDecision() {
+  decision=null; overridePrio=null;
+  const btnA=document.getElementById('btnAccept'),btnO=document.getElementById('btnOverride');
+  btnA.classList.remove('sel'); btnA.setAttribute('aria-pressed','false');
+  btnO.classList.remove('sel'); btnO.setAttribute('aria-pressed','false');
+  document.getElementById('prioSel').classList.remove('open');
+  document.getElementById('prioSel').setAttribute('aria-hidden','true');
+  document.querySelectorAll('.popt').forEach(b=>b.className='popt');
+  document.getElementById('decBox').className='dec-box';
+  document.getElementById('decVal').className='dec-val m';
+  document.getElementById('decVal').textContent='Awaiting input…';
+  document.getElementById('btnNext').disabled=true;
+}
+
+// ── NEXT PATIENT ──────────────────────────────────
+function nextPt() {
+  if (ptIdx>=PATIENTS.length-1) { showCompletion(); return; }
+  const targets=document.querySelectorAll('.fade-target');
+  targets.forEach(t=>t.classList.add('out'));
+  document.getElementById('overlay').classList.add('on');
+  setTimeout(()=>{
+    ptIdx++; saveSession(); loadPt(ptIdx);
+    document.getElementById('overlay').classList.remove('on');
+    setTimeout(()=>targets.forEach(t=>t.classList.remove('out')),50);
+  },650);
+}
+
+// ── COMPLETION ────────────────────────────────────
+function showCompletion() {
+  document.getElementById('mainContent').style.display='none';
+  document.getElementById('compScreen').classList.add('on');
+  const total=sessionLog.length;
+  const accepted=sessionLog.filter(e=>e.decision==='accept').length;
+  const overridden=sessionLog.filter(e=>e.decision==='override').length;
+  const trapsCaught=sessionLog.filter(e=>e.caseType==='trap'&&e.decision==='override').length;
+  const trapsFollowed=sessionLog.filter(e=>e.caseType==='trap'&&e.decision==='accept').length;
+  const correct=sessionLog.filter(e=>e.participantCorrect).length;
+  const accuracy=total>0?Math.round((correct/total)*100):0;
+  document.getElementById('resultsGrid').innerHTML=`
+    <div class="res-card total-card"><div class="res-card-label">Overall Accuracy</div><div class="res-card-val">${accuracy}%</div><div class="res-card-sub">${correct} of ${total} correct</div></div>
+    <div class="res-card acc-card"><div class="res-card-label">Accepted AI</div><div class="res-card-val">${accepted}</div><div class="res-card-sub">out of ${total} cases</div></div>
+    <div class="res-card ovr-card"><div class="res-card-label">Overrode AI</div><div class="res-card-val">${overridden}</div><div class="res-card-sub">out of ${total} cases</div></div>
+    <div class="res-card trap-card"><div class="res-card-label">Traps Caught</div><div class="res-card-val">${trapsCaught} / 5</div><div class="res-card-sub">${trapsFollowed} trap${trapsFollowed!==1?'s':''} followed</div></div>`;
+  document.getElementById('compNote').textContent='Your full session data has been saved locally as a backup. Use the button below to download it — or keep this window open until your instructor collects it.';
+}
+
+// ── DATA DOWNLOAD ─────────────────────────────────
+function downloadData() {
+  const payload={group,startedAt:sessionStorage.getItem('medai_C_startedAt')||'—',completedAt:new Date().toISOString(),totalCases:PATIENTS.length,decisions:sessionLog};
+  const headers=['caseNumber','patientId','caseType','aiPrio','aiConf','aiCorrect','correctPrio','decision','chosenPrio','participantCorrect','followedWrongAI','timestamp'];
+  const rows=sessionLog.map(e=>headers.map(h=>JSON.stringify(e[h]??'')).join(','));
+  const csv=[headers.join(','),...rows].join('\n');
+  const ts=new Date().toISOString().slice(0,16).replace('T','_').replace(':','-');
+  triggerDownload(new Blob([csv],{type:'text/csv'}),           `medai_${group}_${ts}.csv`);
+  setTimeout(()=>triggerDownload(new Blob([JSON.stringify(payload,null,2)],{type:'application/json'}),`medai_${group}_${ts}.json`),300);
+}
+function triggerDownload(blob,filename) {
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=filename;document.body.appendChild(a);a.click();document.body.removeChild(a);
+  setTimeout(()=>URL.revokeObjectURL(url),1000);
+}
+
+
+// ── INIT ──────────────────────────────────────────
+(function init(){
+  // Group is locked at build time — no selection modal.
+  updateGroupBadge();
+  const hadSession = loadSession();
+  if (!sessionStorage.getItem('medai_C_startedAt')) {
+    sessionStorage.setItem('medai_C_startedAt', new Date().toISOString());
+  }
+  saveSession();
+  loadPt(ptIdx);
+  if (!hadSession) openRules();  // First-time visitors see the rules modal.
+})();
+</script>
+</body>
+</html>
