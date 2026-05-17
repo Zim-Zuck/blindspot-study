@@ -124,6 +124,7 @@
 
 
 </div>
+
 <!-- INFORMED CONSENT GATE -->
 <div class="consent-backdrop" id="consentBackdrop" role="dialog" aria-modal="true" aria-labelledby="consentTitle">
   <div class="consent-modal">
@@ -132,47 +133,38 @@
       <h2 class="consent-h1" id="consentTitle">Before You Begin</h2>
       <p class="consent-sub">This is a science fair research study. Please read this statement in full before agreeing to participate.</p>
     </div>
- 
     <div class="consent-body">
- 
       <div class="consent-section">
         <h3 class="cs-title">About this study</h3>
         <p>You are being invited to take part in a study titled <strong>"Blind Spot: Navigating the Grey Zone of Autonomous Decision Making."</strong> The study is being conducted by <strong>Kunashe Makahamadze</strong> as part of a science fair research project. The purpose of the study is to examine how people make decisions when working alongside an AI system in a simulated environment.</p>
       </div>
- 
       <div class="consent-section">
         <h3 class="cs-title">What you will be asked to do</h3>
         <p>You will review <strong>25 simulated patient cases</strong> in a fictional hospital triage setting. For each case, an AI system will suggest a priority level (how urgently the patient needs care). Your task is to decide whether you agree with the AI or whether you think it has the priority wrong. There are no right or wrong answers we expect from you — we simply want to understand how people respond to AI recommendations.</p>
         <p>The whole simulation takes approximately <strong>15–20 minutes</strong>.</p>
       </div>
- 
       <div class="consent-section">
         <h3 class="cs-title">Important: this is a simulation</h3>
         <p>No real patients are involved. All patient profiles are fictional and were created for this study. The scenarios include descriptions of medical emergencies (such as heart attacks, strokes, and severe infections). If you have recently experienced something similar — personally or with a loved one — and feel this content may be distressing, please feel free to decline to participate.</p>
       </div>
- 
       <div class="consent-section">
         <h3 class="cs-title">Risks and benefits</h3>
         <p><strong>Risks:</strong> This study involves minimal risk. The only foreseeable discomfort is brief mild stress from reading clinical scenarios or mild frustration if you find some cases difficult.</p>
         <p><strong>Benefits:</strong> You will not receive any direct benefit from participating. Your responses will contribute to research on how humans and AI systems work together in high-stakes decision making.</p>
       </div>
- 
       <div class="consent-section">
         <h3 class="cs-title">Your data and privacy</h3>
         <p>The simulation will record <strong>only the following</strong>: which group you are in, your decisions on each of the 25 cases, the priority levels you selected, and timestamps. Your name is collected on this consent form for record-keeping but is <strong>never stored together with your simulation responses</strong>. Your responses are anonymous.</p>
         <p>At the end of the simulation you will be asked to upload your response file to a private Google Drive folder that only the researcher can access. No individual results will be published or shown to anyone else.</p>
       </div>
- 
       <div class="consent-section">
         <h3 class="cs-title">Your right to withdraw</h3>
         <p>Your participation is <strong>completely voluntary</strong>. You may stop at any point by simply closing this browser tab. If you stop before completing the simulation and uploading your file, <strong>none of your data will be sent to the researcher</strong>. There is no penalty for withdrawing and no one will be told.</p>
       </div>
- 
       <div class="consent-section">
         <h3 class="cs-title">Questions or concerns</h3>
         <p>If you have any questions about this study, you can contact the researcher (Kunashe Makahamadze) or the adult sponsor named on your paper consent form. If you are under 18, please make sure a parent or guardian has reviewed and signed the parental permission form before you continue.</p>
       </div>
- 
       <div class="consent-section consent-agree">
         <h3 class="cs-title">Your agreement</h3>
         <p>By ticking the box below and entering your name, you confirm that:</p>
@@ -182,14 +174,12 @@
           <li>You agree to your anonymous responses being collected as described.</li>
           <li>If you are under 18, your parent or guardian has given written permission.</li>
         </ul>
- 
         <div class="consent-form">
           <label class="consent-check">
             <input type="checkbox" id="consentCheck" />
             <span class="consent-check-box"></span>
             <span class="consent-check-text">I have read the statement above and I agree to participate in this study.</span>
           </label>
- 
           <div class="consent-fields">
             <div class="consent-field">
               <label for="consentName" class="cf-label">Your full name</label>
@@ -202,15 +192,14 @@
           </div>
         </div>
       </div>
- 
     </div>
- 
     <div class="consent-footer">
       <button class="btn-decline" onclick="declineConsent()">I do not wish to participate</button>
       <button class="btn-consent-start" id="btnConsentStart" onclick="submitConsent()" disabled>Begin Study →</button>
     </div>
   </div>
 </div>
+
 <!-- RULES MODAL -->
 <div class="rules-backdrop hide" id="rulesBackdrop" role="dialog" aria-modal="true" aria-labelledby="rulesTitle">
   <div class="rules-modal">
@@ -493,6 +482,36 @@ function closeRules() {
 document.getElementById('rulesBackdrop').addEventListener('click', function(e){ if(e.target===this) closeRules(); });
 document.addEventListener('keydown', e => { if(e.key==='Escape') closeRules(); });
 
+
+// ── CONSENT GATE ──────────────────────────────────
+function initConsent() {
+  const today = new Date();
+  const dateStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: 'long', year: 'numeric' });
+  document.getElementById('consentDate').value = dateStr;
+  const cb = document.getElementById('consentCheck');
+  const nm = document.getElementById('consentName');
+  const btn = document.getElementById('btnConsentStart');
+  const checkValid = () => { btn.disabled = !(cb.checked && nm.value.trim().length >= 2); };
+  cb.addEventListener('change', checkValid);
+  nm.addEventListener('input', checkValid);
+}
+function submitConsent() {
+  const name = document.getElementById('consentName').value.trim();
+  const date = document.getElementById('consentDate').value;
+  const consentRecord = { consented: true, name: name, date: date, timestamp: new Date().toISOString(), group: group };
+  sessionStorage.setItem('medai_' + group + '_consent', JSON.stringify(consentRecord));
+  const bd = document.getElementById('consentBackdrop');
+  bd.classList.add('closing');
+  setTimeout(() => { bd.style.display = 'none'; openRules(); }, 240);
+}
+function declineConsent() {
+  const modal = document.querySelector('.consent-modal');
+  modal.innerHTML = '<div class="consent-declined"><h2>Thank you for your time.</h2><p>You have chosen not to participate. No data has been collected. You may now close this tab.</p></div>';
+}
+function hasConsented() {
+  return !!sessionStorage.getItem('medai_' + group + '_consent');
+}
+
 // ── LOAD PATIENT ──────────────────────────────────
 function loadPt(i) {
   const p = PATIENTS[i];
@@ -668,7 +687,8 @@ function showCompletion() {
 
 // ── DATA DOWNLOAD ─────────────────────────────────
 function downloadData() {
-  const payload={group,startedAt:sessionStorage.getItem('medai_A_startedAt')||'—',completedAt:new Date().toISOString(),totalCases:PATIENTS.length,decisions:sessionLog};
+  const consent = JSON.parse(sessionStorage.getItem('medai_' + group + '_consent') || 'null');
+  const payload={group,consent,startedAt:sessionStorage.getItem('medai_A_startedAt')||'—',completedAt:new Date().toISOString(),totalCases:PATIENTS.length,decisions:sessionLog};
   const headers=['caseNumber','patientId','caseType','aiPrio','aiConf','aiCorrect','correctPrio','decision','chosenPrio','participantCorrect','followedWrongAI','timestamp'];
   const rows=sessionLog.map(e=>headers.map(h=>JSON.stringify(e[h]??'')).join(','));
   const csv=[headers.join(','),...rows].join('\n');
@@ -693,7 +713,13 @@ function triggerDownload(blob,filename) {
   }
   saveSession();
   loadPt(ptIdx);
-  if (!hadSession) openRules();  // First-time visitors see the rules modal.
+
+  if (hasConsented()) {
+    document.getElementById('consentBackdrop').style.display = 'none';
+    if (!hadSession) openRules();
+  } else {
+    initConsent();
+  }
 })();
 </script>
 </body>
