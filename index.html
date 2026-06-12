@@ -1,0 +1,511 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>RoomRhythm — Visualizer Validation Prototype</title>
+<style>
+  :root{
+    --bg:#17181b; --panel:#202227; --line:#33363d; --text:#e8e8e6; --dim:#9a9da6;
+    --accent:#e8c14a; --danger:#e06a5a; --ok:#6fbf8b; --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--bg);color:var(--text);font:14px/1.5 system-ui,-apple-system,Segoe UI,Roboto,sans-serif;}
+  header{padding:14px 20px;border-bottom:1px solid var(--line);display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+  header h1{font-size:15px;font-weight:600;letter-spacing:.02em}
+  header span{color:var(--dim);font-size:12px;font-family:var(--mono)}
+  .wrap{display:flex;gap:0;align-items:stretch;min-height:calc(100vh - 49px)}
+  aside{width:300px;min-width:300px;border-right:1px solid var(--line);padding:16px;display:flex;flex-direction:column;gap:14px;overflow-y:auto}
+  main{flex:1;padding:16px;display:flex;flex-direction:column;gap:10px;align-items:flex-start;overflow:auto}
+  .step{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel)}
+  .step h2{font-size:11px;text-transform:uppercase;letter-spacing:.08em;color:var(--dim);margin-bottom:8px;font-family:var(--mono)}
+  button{background:#2b2e35;border:1px solid var(--line);color:var(--text);border-radius:6px;padding:8px 12px;font-size:13px;cursor:pointer;width:100%;margin-bottom:6px}
+  button:hover{border-color:#4a4e58}
+  button.primary{background:var(--accent);color:#1a1605;border-color:var(--accent);font-weight:600}
+  button.primary:disabled{opacity:.35;cursor:not-allowed}
+  button:disabled{opacity:.35;cursor:not-allowed}
+  label.toggle{display:flex;align-items:center;gap:8px;font-size:13px;padding:4px 0;cursor:pointer;color:var(--text)}
+  label.toggle input{accent-color:var(--accent)}
+  .hint{font-size:12px;color:var(--dim)}
+  .warn{font-size:12px;color:var(--danger);display:none;margin-top:6px}
+  .status{font-family:var(--mono);font-size:12px;color:var(--dim);min-height:18px}
+  #stage{position:relative;max-width:100%;}
+  canvas{display:block;max-width:100%;height:auto;border-radius:6px}
+  #overlay{position:absolute;left:0;top:0;cursor:crosshair}
+  #fileWall,#filePoster{display:none}
+  .small{font-size:11px;color:var(--dim);font-family:var(--mono)}
+  .checklist{font-size:12px;color:var(--dim);line-height:1.7}
+  @media (max-width:760px){.wrap{flex-direction:column}aside{width:100%;min-width:0;border-right:none;border-bottom:1px solid var(--line)}}
+</style>
+</head>
+<body>
+<header>
+  <h1>RoomRhythm Visualizer — Critical Path Prototype</h1>
+  <span>homography warp · realism layers · nothing else</span>
+</header>
+<div class="wrap">
+<aside>
+  <div class="step">
+    <h2>1 — Wall photo</h2>
+    <button id="btnWall">Upload wall photo</button>
+    <input type="file" id="fileWall" accept="image/*">
+    <div class="hint">Use a real room photo. Angled walls, shadows, furniture — the harder the better.</div>
+  </div>
+
+  <div class="step">
+    <h2>2 — Place corners</h2>
+    <div class="hint">Tap 4 points where the poster's corners should sit: roughly top-left → top-right → bottom-right → bottom-left. Drag any handle to adjust.</div>
+    <button id="btnReset" style="margin-top:8px">Reset corners</button>
+    <div class="warn" id="aspectWarn"></div>
+  </div>
+
+  <div class="step">
+    <h2>3 — Realism layers</h2>
+    <label class="toggle"><input type="checkbox" id="optColor" checked> Color &amp; brightness match</label>
+    <label class="toggle"><input type="checkbox" id="optLight" checked> Local lighting gradient</label>
+    <label class="toggle"><input type="checkbox" id="optEdge" checked> Edge feather + paper shadow</label>
+    <label class="toggle"><input type="checkbox" id="optGrain" checked> Grain + sharpness match</label>
+    <div class="hint" style="margin-top:6px">Toggle layers off one at a time to see what each contributes. "All off" = naive paste, your control sample.</div>
+  </div>
+
+  <div class="step">
+    <h2>4 — Render</h2>
+    <button class="primary" id="btnRender" disabled>Render composite</button>
+    <button id="btnCompare" disabled>Hold to compare with original</button>
+    <button id="btnDownload" disabled>Download PNG</button>
+    <button id="btnPoster">Use my own poster (optional)</button>
+    <input type="file" id="filePoster" accept="image/*">
+    <div class="status" id="status">Waiting for wall photo.</div>
+  </div>
+
+  <div class="step">
+    <h2>Squint test — score it honestly</h2>
+    <div class="checklist">
+      ▢ Perspective: do all four edges sit flat on the wall plane?<br>
+      ▢ Scale: is the poster a believable physical size?<br>
+      ▢ Edges: any bright halo or razor-sharp cut line?<br>
+      ▢ Lighting: does brightness vary the way the wall's does?<br>
+      ▢ Shadow: does it look attached, not floating?<br>
+      ▢ Texture: does it look pasted-on when zoomed in?
+    </div>
+  </div>
+</aside>
+
+<main>
+  <div id="stage">
+    <canvas id="view"></canvas>
+    <canvas id="overlay"></canvas>
+  </div>
+  <div class="small" id="meta"></div>
+</main>
+</div>
+
+<script>
+(() => {
+"use strict";
+const MAX_DIM = 1600;
+
+const view = document.getElementById('view');
+const overlay = document.getElementById('overlay');
+const vctx = view.getContext('2d');
+const octx = overlay.getContext('2d');
+const statusEl = document.getElementById('status');
+const metaEl = document.getElementById('meta');
+const aspectWarn = document.getElementById('aspectWarn');
+
+let wallImgData = null;        // ImageData of downscaled wall photo
+let wallCanvas = null;         // offscreen canvas holding wall photo
+let posterCanvas = makeDefaultPoster();
+let corners = [];              // [{x,y}] in canvas pixel coords
+let dragIdx = -1;
+let resultCanvas = null;       // last composite
+let showingResult = false;
+
+/* ---------- default test poster (procedural, 3:4) ---------- */
+function makeDefaultPoster(){
+  const w=600,h=800,c=document.createElement('canvas');c.width=w;c.height=h;
+  const g=c.getContext('2d');
+  g.fillStyle='#f2ede2';g.fillRect(0,0,w,h);
+  g.fillStyle='#15151a';
+  g.beginPath();g.arc(w/2,h*0.40,w*0.34,0,Math.PI*2);g.fill();
+  g.fillStyle='#f2ede2';
+  g.beginPath();g.arc(w/2+w*0.10,h*0.40-w*0.08,w*0.30,0,Math.PI*2);g.fill();
+  g.fillStyle='#c0392b';g.fillRect(w*0.10,h*0.66,w*0.80,6);
+  g.fillStyle='#15151a';
+  g.font='700 64px Georgia,serif';g.textAlign='left';
+  g.fillText('ROOM',w*0.10,h*0.78);
+  g.fillText('RHYTHM',w*0.10,h*0.865);
+  g.font='400 22px Georgia,serif';g.fillStyle='#6b6b66';
+  g.fillText('PRINT № 001 — HARARE',w*0.10,h*0.93);
+  // thin border so edge behaviour is visible in tests
+  g.strokeStyle='#15151a';g.lineWidth=4;g.strokeRect(8,8,w-16,h-16);
+  return c;
+}
+
+/* ---------- file loading ---------- */
+function bindFile(btnId, inputId, cb){
+  const btn=document.getElementById(btnId), inp=document.getElementById(inputId);
+  btn.addEventListener('click',()=>inp.click());
+  inp.addEventListener('change',e=>{
+    const f=e.target.files[0]; if(!f) return;
+    const img=new Image();
+    img.onload=()=>{cb(img); URL.revokeObjectURL(img.src);};
+    img.src=URL.createObjectURL(f);
+    inp.value='';
+  });
+}
+bindFile('btnWall','fileWall',img=>{
+  const s=Math.min(1, MAX_DIM/Math.max(img.width,img.height));
+  const w=Math.round(img.width*s), h=Math.round(img.height*s);
+  wallCanvas=document.createElement('canvas');wallCanvas.width=w;wallCanvas.height=h;
+  wallCanvas.getContext('2d').drawImage(img,0,0,w,h);
+  wallImgData=wallCanvas.getContext('2d').getImageData(0,0,w,h);
+  view.width=w;view.height=h;overlay.width=w;overlay.height=h;
+  corners=[];resultCanvas=null;showingResult=false;
+  drawBase();drawOverlay();
+  setStatus(`Wall loaded ${w}×${h}. Place 4 corners.`);
+  updateButtons();
+  metaEl.textContent=`working resolution: ${w}×${h}px (downscaled from ${img.width}×${img.height})`;
+});
+bindFile('btnPoster','filePoster',img=>{
+  const c=document.createElement('canvas');
+  const s=Math.min(1, 1200/Math.max(img.width,img.height));
+  c.width=Math.round(img.width*s);c.height=Math.round(img.height*s);
+  c.getContext('2d').drawImage(img,0,0,c.width,c.height);
+  posterCanvas=c;
+  setStatus(`Custom poster loaded (${c.width}×${c.height}). Re-render to apply.`);
+  checkAspect();
+});
+
+/* ---------- corner interaction ---------- */
+function canvasPos(e){
+  const r=overlay.getBoundingClientRect();
+  const x=(e.clientX-r.left)*overlay.width/r.width;
+  const y=(e.clientY-r.top)*overlay.height/r.height;
+  return {x,y};
+}
+overlay.addEventListener('pointerdown',e=>{
+  if(!wallImgData) return;
+  const p=canvasPos(e);
+  const hitR = overlay.width/40;
+  dragIdx=corners.findIndex(c=>Math.hypot(c.x-p.x,c.y-p.y)<hitR);
+  if(dragIdx===-1 && corners.length<4){corners.push(p);dragIdx=corners.length-1;}
+  if(showingResult){showingResult=false;drawBase();}
+  overlay.setPointerCapture(e.pointerId);
+  drawOverlay();updateButtons();
+});
+overlay.addEventListener('pointermove',e=>{
+  if(dragIdx<0) return;
+  const p=canvasPos(e);
+  corners[dragIdx]={x:Math.max(0,Math.min(overlay.width,p.x)),y:Math.max(0,Math.min(overlay.height,p.y))};
+  drawOverlay();
+});
+overlay.addEventListener('pointerup',()=>{dragIdx=-1;checkAspect();});
+document.getElementById('btnReset').addEventListener('click',()=>{
+  corners=[];showingResult=false;resultCanvas=null;
+  if(wallImgData){drawBase();drawOverlay();}
+  aspectWarn.style.display='none';
+  updateButtons();setStatus('Corners cleared.');
+});
+
+function sortedCorners(){
+  // order by angle around centroid → TL,TR,BR,BL
+  const cx=corners.reduce((a,c)=>a+c.x,0)/4, cy=corners.reduce((a,c)=>a+c.y,0)/4;
+  const s=[...corners].sort((a,b)=>Math.atan2(a.y-cy,a.x-cx)-Math.atan2(b.y-cy,b.x-cx));
+  // rotate so first is top-left-most
+  let k=0,best=1e18;
+  for(let i=0;i<4;i++){const v=s[i].x+s[i].y;if(v<best){best=v;k=i;}}
+  return [s[k],s[(k+1)%4],s[(k+2)%4],s[(k+3)%4]];
+}
+
+function checkAspect(){
+  aspectWarn.style.display='none';
+  if(corners.length<4) return;
+  const [tl,tr,br,bl]=sortedCorners();
+  const w=(Math.hypot(tr.x-tl.x,tr.y-tl.y)+Math.hypot(br.x-bl.x,br.y-bl.y))/2;
+  const h=(Math.hypot(bl.x-tl.x,bl.y-tl.y)+Math.hypot(br.x-tr.x,br.y-tr.y))/2;
+  const quadAR=w/h, posterAR=posterCanvas.width/posterCanvas.height;
+  const dev=Math.abs(quadAR-posterAR)/posterAR;
+  if(dev>0.25){
+    aspectWarn.textContent=`⚠ Selected region is ~${Math.round(dev*100)}% off the poster's aspect ratio (${posterAR.toFixed(2)}). The print will look stretched — the #1 realism killer.`;
+    aspectWarn.style.display='block';
+  }
+}
+
+/* ---------- drawing ---------- */
+function drawBase(){vctx.putImageData(wallImgData,0,0);}
+function drawOverlay(){
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  if(!corners.length) return;
+  const r=Math.max(5,overlay.width/120);
+  if(corners.length===4){
+    const q=sortedCorners();
+    octx.beginPath();octx.moveTo(q[0].x,q[0].y);
+    for(let i=1;i<4;i++)octx.lineTo(q[i].x,q[i].y);
+    octx.closePath();
+    octx.strokeStyle='rgba(232,193,74,.9)';octx.lineWidth=2;octx.stroke();
+    octx.fillStyle='rgba(232,193,74,.10)';octx.fill();
+  }
+  corners.forEach((c,i)=>{
+    octx.beginPath();octx.arc(c.x,c.y,r,0,Math.PI*2);
+    octx.fillStyle='rgba(232,193,74,.95)';octx.fill();
+    octx.fillStyle='#1a1605';octx.font=`${r*1.2}px monospace`;octx.textAlign='center';octx.textBaseline='middle';
+    octx.fillText(i+1,c.x,c.y);
+  });
+}
+function setStatus(s){statusEl.textContent=s;}
+function updateButtons(){
+  document.getElementById('btnRender').disabled=!(wallImgData&&corners.length===4);
+  document.getElementById('btnCompare').disabled=!resultCanvas;
+  document.getElementById('btnDownload').disabled=!resultCanvas;
+}
+
+/* ---------- linear algebra ---------- */
+function solveLinear(A,b){ // Gaussian elimination, A: n×n flat row-major
+  const n=b.length, M=A.map(r=>r.slice()), v=b.slice();
+  for(let col=0;col<n;col++){
+    let p=col;
+    for(let r=col+1;r<n;r++) if(Math.abs(M[r][col])>Math.abs(M[p][col])) p=r;
+    if(Math.abs(M[p][col])<1e-12) return null;
+    [M[col],M[p]]=[M[p],M[col]];[v[col],v[p]]=[v[p],v[col]];
+    for(let r=0;r<n;r++){
+      if(r===col) continue;
+      const f=M[r][col]/M[col][col];
+      for(let c=col;c<n;c++) M[r][c]-=f*M[col][c];
+      v[r]-=f*v[col];
+    }
+  }
+  return v.map((x,i)=>x/M[i][i]);
+}
+function homography(src,dst){ // 4 point pairs → H (3×3, h33=1)
+  const A=[],b=[];
+  for(let i=0;i<4;i++){
+    const {x,y}=src[i],{x:X,y:Y}=dst[i];
+    A.push([x,y,1,0,0,0,-X*x,-X*y]);b.push(X);
+    A.push([0,0,0,x,y,1,-Y*x,-Y*y]);b.push(Y);
+  }
+  const h=solveLinear(A,b);
+  if(!h) return null;
+  return [h[0],h[1],h[2],h[3],h[4],h[5],h[6],h[7],1];
+}
+function invert3(m){
+  const [a,b,c,d,e,f,g,h,i]=m;
+  const A=e*i-f*h,B=c*h-b*i,C=b*f-c*e;
+  const det=a*A+d*B+g*C;
+  if(Math.abs(det)<1e-12) return null;
+  return [A/det,B/det,C/det,(f*g-d*i)/det,(a*i-c*g)/det,(c*d-a*f)/det,(d*h-e*g)/det,(b*g-a*h)/det,(a*e-b*d)/det];
+}
+
+/* ---------- environment sampling ---------- */
+function lum(r,g,b){return 0.2126*r+0.7152*g+0.0722*b;}
+function sampleRing(q){
+  // points just outside the quad: walk each edge, push outward from centroid
+  const W=wallImgData.width,H=wallImgData.height,D=wallImgData.data;
+  const cx=(q[0].x+q[1].x+q[2].x+q[3].x)/4, cy=(q[0].y+q[1].y+q[2].y+q[3].y)/4;
+  const off=Math.max(6,W/130);
+  const pts=[];
+  for(let e=0;e<4;e++){
+    const a=q[e],b=q[(e+1)%4];
+    for(let t=0.1;t<=0.9;t+=0.16){
+      const px=a.x+(b.x-a.x)*t, py=a.y+(b.y-a.y)*t;
+      const dx=px-cx,dy=py-cy,len=Math.hypot(dx,dy)||1;
+      const x=Math.round(px+dx/len*off), y=Math.round(py+dy/len*off);
+      if(x<2||y<2||x>=W-2||y>=H-2) continue;
+      // 3×3 mean + local deviation for noise estimate
+      let sr=0,sg=0,sb=0;
+      for(let j=-1;j<=1;j++)for(let k=-1;k<=1;k++){
+        const idx=((y+j)*W+(x+k))*4;sr+=D[idx];sg+=D[idx+1];sb+=D[idx+2];
+      }
+      sr/=9;sg/=9;sb/=9;
+      const ci=(y*W+x)*4;
+      const dev=Math.abs(lum(D[ci],D[ci+1],D[ci+2])-lum(sr,sg,sb));
+      pts.push({x,y,r:sr,g:sg,b:sb,L:lum(sr,sg,sb),dev});
+    }
+  }
+  if(pts.length<6) return null;
+  const mean=k=>pts.reduce((a,p)=>a+p[k],0)/pts.length;
+  const mr=mean('r'),mg=mean('g'),mb=mean('b'),mL=mean('L');
+  const noise=mean('dev');
+  // least-squares plane L = a + b·x + c·y
+  let Sx=0,Sy=0,Sxx=0,Syy=0,Sxy=0,SL=0,SxL=0,SyL=0,n=pts.length;
+  for(const p of pts){Sx+=p.x;Sy+=p.y;Sxx+=p.x*p.x;Syy+=p.y*p.y;Sxy+=p.x*p.y;SL+=p.L;SxL+=p.x*p.L;SyL+=p.y*p.L;}
+  const sol=solveLinear([[n,Sx,Sy],[Sx,Sxx,Sxy],[Sy,Sxy,Syy]],[SL,SxL,SyL]);
+  return {mr,mg,mb,mL,noise,plane:sol};
+}
+
+/* ---------- render ---------- */
+document.getElementById('btnRender').addEventListener('click',()=>{
+  setStatus('Rendering…');
+  requestAnimationFrame(()=>requestAnimationFrame(render));
+});
+
+function render(){
+  const t0=performance.now();
+  const q=sortedCorners();
+  const W=wallImgData.width,H=wallImgData.height;
+  const pw=posterCanvas.width,ph=posterCanvas.height;
+  const pData=posterCanvas.getContext('2d').getImageData(0,0,pw,ph).data;
+
+  const Hm=homography(
+    [{x:0,y:0},{x:pw,y:0},{x:pw,y:ph},{x:0,y:ph}], q);
+  const Hi=Hm&&invert3(Hm);
+  if(!Hi){setStatus('Degenerate corner layout — adjust the points.');return;}
+
+  const useColor=document.getElementById('optColor').checked;
+  const useLight=document.getElementById('optLight').checked;
+  const useEdge=document.getElementById('optEdge').checked;
+  const useGrain=document.getElementById('optGrain').checked;
+
+  const env=sampleRing(q);
+  // color/exposure factors
+  let fr=1,fg=1,fb=1,exp=1;
+  if(useColor&&env){
+    const gray=(env.mr+env.mg+env.mb)/3||1;
+    const S=0.55; // tint strength
+    fr=1+S*(env.mr/gray-1);fg=1+S*(env.mg/gray-1);fb=1+S*(env.mb/gray-1);
+    const e=env.mL/150;
+    exp=Math.max(0.7,Math.min(1.25,1+0.35*(e-1)));
+  }
+
+  // build result: wall + (optional shadow) on canvas, then composite poster pixels
+  const rc=document.createElement('canvas');rc.width=W;rc.height=H;
+  const rctx=rc.getContext('2d');
+  rctx.drawImage(wallCanvas,0,0);
+  if(useEdge){
+    const sOff=Math.max(2,W/450), sBlur=Math.max(3,W/300);
+    rctx.save();
+    rctx.filter=`blur(${sBlur}px)`;
+    rctx.fillStyle='rgba(0,0,0,0.30)';
+    rctx.beginPath();
+    rctx.moveTo(q[0].x+sOff*0.4,q[0].y+sOff*0.6);
+    rctx.lineTo(q[1].x+sOff,q[1].y+sOff*0.6);
+    rctx.lineTo(q[2].x+sOff,q[2].y+sOff);
+    rctx.lineTo(q[3].x+sOff*0.4,q[3].y+sOff);
+    rctx.closePath();rctx.fill();
+    rctx.restore();
+  }
+  const out=rctx.getImageData(0,0,W,H);
+  const O=out.data;
+
+  // bounding box
+  let x0=W,y0=H,x1=0,y1=0;
+  for(const p of q){x0=Math.min(x0,p.x);y0=Math.min(y0,p.y);x1=Math.max(x1,p.x);y1=Math.max(y1,p.y);}
+  x0=Math.max(0,Math.floor(x0)-2);y0=Math.max(0,Math.floor(y0)-2);
+  x1=Math.min(W-1,Math.ceil(x1)+2);y1=Math.min(H-1,Math.ceil(y1)+2);
+  const bw=x1-x0+1,bh=y1-y0+1;
+
+  // feather widths in poster space, derived from on-screen quad size
+  const screenW=(Math.hypot(q[1].x-q[0].x,q[1].y-q[0].y)+Math.hypot(q[2].x-q[3].x,q[2].y-q[3].y))/2;
+  const screenH=(Math.hypot(q[3].x-q[0].x,q[3].y-q[0].y)+Math.hypot(q[2].x-q[1].x,q[2].y-q[1].y))/2;
+  const fU=1.4*pw/Math.max(screenW,1), fV=1.4*ph/Math.max(screenH,1);
+
+  // warp into RGBA float layer over bbox
+  const layer=new Float32Array(bw*bh*4);
+  const grainSigma=(useGrain&&env)?Math.min(8,env.noise)*0.9:0;
+  let g1=0,g2=0,hasG=false;
+  function gauss(){ if(hasG){hasG=false;return g2;} const u=Math.random()||1e-9,v=Math.random(); const m=Math.sqrt(-2*Math.log(u)); g1=m*Math.cos(2*Math.PI*v);g2=m*Math.sin(2*Math.PI*v);hasG=true;return g1; }
+
+  for(let y=y0;y<=y1;y++){
+    for(let x=x0;x<=x1;x++){
+      const d=Hi[6]*x+Hi[7]*y+Hi[8];
+      const u=(Hi[0]*x+Hi[1]*y+Hi[2])/d;
+      const v=(Hi[3]*x+Hi[4]*y+Hi[5])/d;
+      if(u<-fU||v<-fV||u>pw+fU||v>ph+fV) continue;
+      // edge alpha
+      let a=1;
+      if(useEdge){
+        const eU=Math.min(u, pw-u)/fU, eV=Math.min(v, ph-v)/fV;
+        a=Math.max(0,Math.min(1,Math.min(eU,eV)+0.5));
+      } else {
+        if(u<0||v<0||u>=pw||v>=ph) continue;
+      }
+      if(a<=0) continue;
+      // bilinear sample (clamped)
+      const cu=Math.max(0,Math.min(pw-1.001,u)), cv=Math.max(0,Math.min(ph-1.001,v));
+      const ix=Math.floor(cu),iy=Math.floor(cv),tx=cu-ix,ty=cv-iy;
+      const i00=(iy*pw+ix)*4,i10=i00+4,i01=i00+pw*4,i11=i01+4;
+      let r=(pData[i00]*(1-tx)+pData[i10]*tx)*(1-ty)+(pData[i01]*(1-tx)+pData[i11]*tx)*ty;
+      let g=(pData[i00+1]*(1-tx)+pData[i10+1]*tx)*(1-ty)+(pData[i01+1]*(1-tx)+pData[i11+1]*tx)*ty;
+      let b=(pData[i00+2]*(1-tx)+pData[i10+2]*tx)*(1-ty)+(pData[i01+2]*(1-tx)+pData[i11+2]*tx)*ty;
+      // exposure + tint
+      r*=exp*fr;g*=exp*fg;b*=exp*fb;
+      // local lighting plane
+      if(useLight&&env&&env.plane){
+        const Lp=env.plane[0]+env.plane[1]*x+env.plane[2]*y;
+        let m=Lp/(env.mL||1);
+        m=Math.max(0.55,Math.min(1.45,m));
+        m=1+(m-1)*0.85;
+        r*=m;g*=m;b*=m;
+      }
+      if(grainSigma>0){const n=gauss()*grainSigma;r+=n;g+=n;b+=n;}
+      const li=((y-y0)*bw+(x-x0))*4;
+      layer[li]=r;layer[li+1]=g;layer[li+2]=b;layer[li+3]=a;
+    }
+  }
+
+  // sharpness match: one soft separable pass over premultiplied layer
+  if(useGrain){
+    const k=[0.22,0.56,0.22];
+    const tmp=new Float32Array(layer.length);
+    // premultiply
+    for(let i=0;i<layer.length;i+=4){const a=layer[i+3];layer[i]*=a;layer[i+1]*=a;layer[i+2]*=a;}
+    for(let y=0;y<bh;y++)for(let x=0;x<bw;x++){
+      const i=((y*bw+x))*4;
+      for(let c=0;c<4;c++){
+        let s=0;
+        for(let o=-1;o<=1;o++){const xx=Math.max(0,Math.min(bw-1,x+o));s+=layer[(y*bw+xx)*4+c]*k[o+1];}
+        tmp[i+c]=s;
+      }
+    }
+    for(let y=0;y<bh;y++)for(let x=0;x<bw;x++){
+      const i=((y*bw+x))*4;
+      for(let c=0;c<4;c++){
+        let s=0;
+        for(let o=-1;o<=1;o++){const yy=Math.max(0,Math.min(bh-1,y+o));s+=tmp[(yy*bw+x)*4+c]*k[o+1];}
+        layer[i+c]=s;
+      }
+    }
+    // unpremultiply
+    for(let i=0;i<layer.length;i+=4){const a=layer[i+3];if(a>1e-4){layer[i]/=a;layer[i+1]/=a;layer[i+2]/=a;}}
+  }
+
+  // composite over base
+  for(let y=0;y<bh;y++){
+    for(let x=0;x<bw;x++){
+      const li=(y*bw+x)*4, a=layer[li+3];
+      if(a<=0) continue;
+      const oi=((y+y0)*W+(x+x0))*4;
+      O[oi]  =Math.max(0,Math.min(255,layer[li]  *a+O[oi]  *(1-a)));
+      O[oi+1]=Math.max(0,Math.min(255,layer[li+1]*a+O[oi+1]*(1-a)));
+      O[oi+2]=Math.max(0,Math.min(255,layer[li+2]*a+O[oi+2]*(1-a)));
+    }
+  }
+  rctx.putImageData(out,0,0);
+  resultCanvas=rc;
+  vctx.drawImage(rc,0,0);
+  octx.clearRect(0,0,overlay.width,overlay.height);
+  showingResult=true;
+  updateButtons();
+  setStatus(`Rendered in ${(performance.now()-t0).toFixed(0)}ms. Now judge it like a customer.`);
+}
+
+/* ---------- compare & download ---------- */
+const btnCompare=document.getElementById('btnCompare');
+btnCompare.addEventListener('pointerdown',()=>{if(resultCanvas){drawBase();}});
+btnCompare.addEventListener('pointerup',()=>{if(resultCanvas){vctx.drawImage(resultCanvas,0,0);}});
+btnCompare.addEventListener('pointerleave',()=>{if(resultCanvas&&showingResult){vctx.drawImage(resultCanvas,0,0);}});
+
+document.getElementById('btnDownload').addEventListener('click',()=>{
+  if(!resultCanvas) return;
+  resultCanvas.toBlob(b=>{
+    const a=document.createElement('a');
+    a.href=URL.createObjectURL(b);
+    a.download='roomrhythm-mockup-test.png';
+    a.click();
+    setTimeout(()=>URL.revokeObjectURL(a.href),5000);
+  },'image/png');
+});
+})();
+</script>
+</body>
+</html>
